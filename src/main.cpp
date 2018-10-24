@@ -13,6 +13,7 @@
 #define EXPONENT 2
 #define BRIGHTNESS_MAX_REL pow(STEPS, EXPONENT)
 #define BRIGHTNESS_MAX 255
+#define DURATION 1000
 
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUMPIXELS, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 HCSR04 hcsr04(TRIG_PIN, ECHO_PIN, 0, 1000);
@@ -58,33 +59,14 @@ void loop()
         int brightness = max(0, min(BRIGHTNESS_MAX, map(rel_brightness, 0, BRIGHTNESS_MAX_REL, 0, BRIGHTNESS_MAX)));
         int diff = brightness - currentBrightness;
         int step = diff > 0 ? 1 : -1;
-        int start = 0;
+        int progress = 0;
+        int changeDelay = ceil(DURATION / abs(diff));
 
-        Serial.print("distance: ");
-        Serial.print(realDistance);
-        Serial.print(", x: ");
-        Serial.print(x);
-        Serial.print(", rel. brightness: ");
-        Serial.print(rel_brightness);
-        Serial.print(", current brightness: ");
-        Serial.print(currentBrightness);
-        Serial.print(", brightness: ");
-        Serial.print(brightness);
-        Serial.print(", diff: ");
-        Serial.print(diff);
-        Serial.println();
-
-        while (start != diff)
+        while (progress != diff)
         {
-            start += step;
-            Serial.print(start);
-            Serial.print(" c: ");
-            Serial.print(currentBrightness);
-            Serial.print(" -> ");
-            Serial.print(currentBrightness + start);
-            Serial.println();
+            progress += step;
 
-            int brightness_val = currentBrightness + start;
+            int brightness_val = currentBrightness + progress;
 
             for (int i = 0; i < NUMPIXELS; i++)
             {
@@ -97,13 +79,13 @@ void loop()
 
             pixels.show(); // This sends the updated pixel color to the hardware.
 
-            delay(10);
+            delay(changeDelay);
         }
 
         currentBrightness = brightness;
 
-        delay(100);
+        delay(500);
     }
 
-    delay(100);
+    delay(500);
 }
