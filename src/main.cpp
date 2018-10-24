@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
-#include <hcsr04_1.h>
+#include <hcsr04.h>
 
 #define TRIG_PIN_1 3
 #define ECHO_PIN_1 4
@@ -20,6 +20,47 @@ HCSR04 hcsr04_1(TRIG_PIN_1, ECHO_PIN_1, 0, 1000);
 
 int distanceMax1 = 200;
 int currentBrightness1 = 0;
+
+int updateStrip(Adafruit_NeoPixel &pixels, int realDistance, int distanceMax, int currentBrightness)
+{
+    int x = max(0, min(STEPS, map(realDistance, DISTANCE_MIN, distanceMax, 0, STEPS)));
+    unsigned int rel_brightness = pow(x, EXPONENT);
+    int brightness = max(0, min(BRIGHTNESS_MAX, map(rel_brightness, 0, BRIGHTNESS_MAX_REL, 0, BRIGHTNESS_MAX)));
+    int diff = brightness - currentBrightness;
+    int step = diff > 0 ? 1 : -1;
+    int progress = 0;
+    int changeDelay = ceil(DURATION / abs(diff));
+
+    Serial.print("Update brightness from ");
+    Serial.print(currentBrightness);
+    Serial.print(" to ");
+    Serial.print(brightness);
+    Serial.println();
+
+    while (progress != diff)
+    {
+        progress += step;
+
+        int brightness_val = currentBrightness + progress;
+
+        for (int i = 0; i < NUMPIXELS; i++)
+        {
+            // pixels.Color takes RGB values, from 0,0,0 up to 255,255,255
+            pixels.setPixelColor(i, pixels.Color(brightness_val, brightness_val, (int)brightness_val / 2));
+        }
+
+        // Serial.print("Update strip step -> ");
+        // Serial.println(brightness);
+
+        pixels.show(); // This sends the updated pixel color to the hardware.
+
+        delay(changeDelay);
+    }
+
+    delay(500);
+
+    return brightness;
+}
 
 void setup()
 {
@@ -53,43 +94,7 @@ void loop()
 
     if (realDistance1 <= distanceMax1 + (OFFSET_MAX / 2))
     {
-        int x = max(0, min(STEPS, map(realDistance1, DISTANCE_MIN, distanceMax1, 0, STEPS)));
-        unsigned int rel_brightness = pow(x, EXPONENT);
-        int brightness = max(0, min(BRIGHTNESS_MAX, map(rel_brightness, 0, BRIGHTNESS_MAX_REL, 0, BRIGHTNESS_MAX)));
-        int diff = brightness - currentBrightness1;
-        int step = diff > 0 ? 1 : -1;
-        int progress = 0;
-        int changeDelay = ceil(DURATION / abs(diff));
-
-        Serial.print("Update brightness from ");
-        Serial.print(currentBrightness1);
-        Serial.print(" to ");
-        Serial.print(brightness);
-        Serial.println();
-
-        while (progress != diff)
-        {
-            progress += step;
-
-            int brightness_val = currentBrightness1 + progress;
-
-            for (int i = 0; i < NUMPIXELS; i++)
-            {
-                // pixels1.Color takes RGB values, from 0,0,0 up to 255,255,255
-                pixels1.setPixelColor(i, pixels1.Color(brightness_val, brightness_val, (int)brightness_val / 2));
-            }
-
-            // Serial.print("Update strip step -> ");
-            // Serial.println(brightness);
-
-            pixels1.show(); // This sends the updated pixel color to the hardware.
-
-            delay(changeDelay);
-        }
-
-        currentBrightness1 = brightness;
-
-        delay(500);
+        currentBrightness1 = updateStrip(pixels1, realDistance1, distanceMax1, currentBrightness1);
     }
 
     delay(500);
