@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include <hcsr04.h>
+#include <LowPower.h>
 
 #define PIXEL_PIN_1 2
 #define TRIG_PIN_1 3
@@ -33,6 +34,19 @@ HCSR04 hcsr04_2(TRIG_PIN_2, ECHO_PIN_2, OFFSET_MIN, 500 + OFFSET_MAX);
 int distanceMax2 = 200;
 int currentBrightness2 = 0;
 
+void sleep(period_t sleepTime)
+{
+    LowPower.idle(
+        sleepTime,
+        ADC_OFF,
+        TIMER2_OFF,
+        TIMER1_OFF,
+        TIMER0_OFF,
+        SPI_OFF,
+        USART0_OFF,
+        TWI_OFF);
+}
+
 int updateStrip(int no, Adafruit_NeoPixel &pixels, int realDistance, int distanceMax, int currentBrightness)
 {
     int x = max(0, min(STEPS, map(realDistance, DISTANCE_MIN, distanceMax, 0, STEPS)));
@@ -41,7 +55,8 @@ int updateStrip(int no, Adafruit_NeoPixel &pixels, int realDistance, int distanc
     int diff = brightness - currentBrightness;
     int step = diff > 0 ? 1 : -1;
     int progress = 0;
-    int changeDelay = min(50, ceil(DURATION / abs(diff)));
+    // ~ 60fps minimum
+    int changeDelay = min(16, ceil(DURATION / abs(diff)));
 
     Serial.print("Update brightness of ");
     Serial.print(no);
@@ -74,7 +89,7 @@ int updateStrip(int no, Adafruit_NeoPixel &pixels, int realDistance, int distanc
         delay(changeDelay);
     }
 
-    delay(500);
+    sleep(SLEEP_1S);
 
     return brightness;
 }
@@ -124,6 +139,8 @@ void setup()
 
 void loop()
 {
+    sleep((currentBrightness1 < 1 && currentBrightness2 < 1) ? SLEEP_2S : SLEEP_250MS);
+
     int realDistance1 = hcsr04_1.distanceInMillimeters();
 
     if (realDistance1 > 0 && realDistance1 <= distanceMax1 + OFFSET_MAX)
@@ -131,7 +148,7 @@ void loop()
         currentBrightness1 = updateStrip(1, pixels1, realDistance1, distanceMax1, currentBrightness1);
     }
 
-    delay(300);
+    sleep(SLEEP_120MS);
 
     int realDistance2 = hcsr04_2.distanceInMillimeters();
 
@@ -139,6 +156,4 @@ void loop()
     {
         currentBrightness2 = updateStrip(2, pixels2, realDistance2, distanceMax2, currentBrightness2);
     }
-
-    delay(300);
 }
