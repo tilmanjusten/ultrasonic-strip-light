@@ -46,4 +46,4 @@ See (development section above)[#Development].
 
 [See Fritzing Sketch](docs/Wiring.fzz).
 
-<img src="docs/img/wiring.png" alt="Fritzing Sketch">
+<img src="docs/img/wiring-strip-light.png" alt="Fritzing Sketch">
